@@ -18,19 +18,26 @@ function Block(index, data, prevHash) {
     
         setPrevHash: function(prev) {
             this.prevHash = prev;
-            this.reHash(this);
+            return this.reHash(this);
         },
         setData: function(data) {
             this.data = data;
-            this.reHash(this);
+            return this.reHash(this);
         },
         setNonce: function(nonce) {
             this.nonce = nonce;
-            this.reHash(this);
+            return this.reHash(this);
         },
         reHash: function() {
             // calculate a SHA256 hash of the contents of the block
             this.hash = hashBlock(this);
+            return this;
+        },
+        clone: function() {
+            var c = new Block(this.index, this.data, this.prevHash);
+            c.nonce = this.nonce;
+            c.hash = this.hash;
+            return c;
         }
     };
 }
@@ -39,20 +46,42 @@ function BlockChain() {
     return {
         blocks: [],
 
+        // Checks the block for next in chain and integrity.
+        checkBlock: function(block) {
+            // Check last block hash is prev hash on new block
+            if (this.blocks.length === 0 && block.prevHash != "0".repeat(64)) return false;
+            if (this.blocks.length > 0 && block.prevHash != this.lastHash()) return false;
+
+            // TODO: Check integrety by validating the signature of the data
+            //       (not yet implemented in this blockchain)
+
+            return true;
+        },
+
+        // Submit a new block to be added to the chain. This should set miners
+        // to work and the first miner that generates a valid hash should post
+        // the block back with the addBlock procedure.
+        submitBlock: function(block) {
+            // First do block checks
+            if (!this.checkBlock(block)) return false;
+
+            // TODO: distribute block to miners
+            return this.addBlock(mine(block));
+        },
+
         // Add a new block to the blockchain. Before allowing the new block to 
         // the chain do checks to see if the block is intended as next block 
         // and to verify the contents.
         addBlock: function(block) {
     
-            // Check last block hash is prev hash on new block
-            if (this.blocks.length === 0 && block.prevHash != 0) return false;
-            if (this.blocks.length > 0 && block.prevHash != this.blocks[this.blocks.length-1].hash) return false;
+            // First do block checks
+            if (!this.checkBlock(block)) return false;
             // Check the hash for the new block
             if (hashBlock(block) != block.hash) return false;
-            // Check if the hash is made with the right difficulty(mined)
+            // Then check if the hash is made with the right difficulty(mined)
             if (!checkHash(block)) return false;
     
-            // All checks passed, push the blcok in the chain.
+            // All checks passed, push the block in the chain.
             this.blocks.push(block);
             return true;
         }, 
@@ -61,6 +90,14 @@ function BlockChain() {
         },
         lastHash: function() {
             return this.blocks.length > 0 ? this.blocks[this.blocks.length-1].hash : undefined;
+        },
+        clone: function() {
+            var bc = new BlockChain();
+            // Copy all the blocks
+            for(i = 0; i < this.blocks.length; i++) {
+                bc.blocks.push(this.blocks[i].clone());
+            }
+            return bc;
         }
     };
 }
@@ -86,7 +123,15 @@ const checkHash = function(block) {
     return block.hash.startsWith(hashStart);
 }
 
+// Mine for a hash which starts with the number of leading zero's in hex 
+// presentation. The number of leading zero's is set in the difficulty 
+// variable.
 const mine = function(block) {
+    // Use current setting for difficulty
+    hashStart = "0".repeat(difficulty);
+    // Set nonce to zero and add 1 on every step. Should be done by a working
+    // random number but that's hard in javascript and the math.random() does 
+    // not solve the nonce problem in a reasonable time.
     block.setNonce(0);
     while (!checkHash(block)) {
         block.setNonce(block.nonce+1);

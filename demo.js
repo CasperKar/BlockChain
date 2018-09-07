@@ -19,6 +19,7 @@
                     // create html DOM
                     chainDOM = $('\
                         <div id="chain'+index+'" class="chain-div">\
+                            <h2>Node '+index+'</h2>\
                             <button class="new-block">New block</button>\
                             <div class="chain-view">\
                                 <ul class="chain"></ul>\
@@ -114,13 +115,14 @@
                 }
             },
             
+            // Returns the blockchain node for the DOM element.
             getBlockChain = function(elem) {
                 var chainDOM = $(elem).closest('.chain-div'),
                     chainIndex = chainDOM.data('index');
 
                 return chainNodes[chainIndex];
             },
-            // Append a new block to the chain.
+            // Create a new block and add is to the chain.
             newBlock = function(e) {
                 // Create a new block using the values from the last block in the blockchain.
                 var bc = getBlockChain(e.target),
@@ -129,7 +131,7 @@
                 // And mine the hash to get a valid Proof Of Work.
                 mine(newBlock);
                 // When mining is done we can add the block to the blockchain.
-                bc.addBlock(newBlock);
+                bc.submitBlock(newBlock);
                 // And create the DOM for the new block
                 createBlocksDOM(chainDOM, bc);
             },
@@ -164,30 +166,31 @@
                 refreshHash(bc, idx, blockDOM);
             };
             
-      
-
         return {
             init: function() {
                 // Create an initial BlockChain and add some blocks
                 var bc = new BlockChain();
                 // Initialize a few blocks
-                bc.addBlock(mine(new Block(bc.nextIndex(), "test", bc.lastHash())));
-                bc.addBlock(mine(new Block(bc.nextIndex(), "the", bc.lastHash())));
-                bc.addBlock(mine(new Block(bc.nextIndex(), "blockchain", bc.lastHash())));
+                bc.submitBlock(new Block(bc.nextIndex(), "test", bc.lastHash()));
+                bc.submitBlock(new Block(bc.nextIndex(), "the", bc.lastHash()));
+                bc.submitBlock(new Block(bc.nextIndex(), "blockchain", bc.lastHash()));
                 // Failing adds
-                bc.addBlock(mine(new Block(100, "failed wrong index")));
-                bc.addBlock(mine(new Block(bc.nextIndex(), "failed wrong last hash")));
+                bc.submitBlock(new Block(100, "failed wrong index"));
+                bc.submitBlock(new Block(bc.nextIndex(), "failed wrong last hash"));
                 bc.addBlock(new Block(bc.nextIndex(), "failed wrong hash difficulty", bc.lastHash()));
                 var changedBlock = mine(new Block(bc.nextIndex(), "failed wrong hash difficulty", bc.lastHash()));
                 changedBlock.data = "Something else";
                 bc.addBlock(changedBlock);
 
                 chainNodes.push(bc);
+                chainNodes.push(bc.clone());
 
                 // Create the demo element where all the chains will be shown
                 $(document.body).append($('<div class="chainDemo"></div>'));
 
-                $chain = createChainDOM($('.chainDemo'), bc);
+                chainNodes.forEach(function(bc) { 
+                    createChainDOM($('.chainDemo'), bc); 
+                });
             }
         };
     })();

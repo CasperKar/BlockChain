@@ -18,10 +18,24 @@ input, textarea, button {
     padding: 0;
     margin: 20px;
 }
+.chain-div>h2 {
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    margin: 0;
+}
+.chain-div>.new-block {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+}
 .chain-view {
     display: block;
+    padding-top: 40px;
     overflow-x: scroll;
-    border: 3px solid burlywood;
+    background: rgb(206, 210, 226);
+    border: 3px solid rgb(145, 148, 160);
+    border-radius: 5px;
 }
 .chain {
     display: block;
@@ -33,7 +47,8 @@ input, textarea, button {
     display: inline-block;
     width: 400px;
     margin: 10px;
-    padding: 10px;
+    padding: 7px;
+    border: 3px solid rgb(145, 148, 160);
     border-radius: 5px;
     background:bisque;
 }
@@ -59,9 +74,4 @@ input, textarea, button {
 .block input[type=text],
 .block textarea {
     width: 300px;
-}
-.new-block {
-    position: absolute;
-    right: 5px;
-    top: 5px;
 }
