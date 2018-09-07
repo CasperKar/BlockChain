@@ -1,7 +1,8 @@
 var difficulty = 3; // number of zeros required at front of hash
 var hashStart = "0".repeat(difficulty);
 
-function Block(data, prevHash) {
+function Block(index, data, prevHash) {
+    this.index = index;
     this.prevHash = prevHash || "0".repeat(64);
     this.data = data || "";
     this.nonce = 0;
@@ -50,7 +51,7 @@ function BlockChain() {
 }
 
 function hashBlock(block) {
-    return CryptoJS.SHA256(block.prevHash + block.data + block.nonce).toString(CryptoJS.enc.Hex);
+    return CryptoJS.SHA256(block.index + block.prevHash + block.data + block.nonce).toString(CryptoJS.enc.Hex);
 }
 
 function checkHash(block) {

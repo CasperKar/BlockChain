@@ -76,26 +76,35 @@ input, textarea, button {
 
 <script>
 var chain = new BlockChain();
-chain.addBlock(mine(new Block("test", chain.lastHash())));
-chain.addBlock(mine(new Block("the", chain.lastHash())));
-chain.addBlock(mine(new Block("blockchain", chain.lastHash())));
+chain.addBlock(mine(new Block(chain.blocks.length, "test", chain.lastHash())));
+chain.addBlock(mine(new Block(chain.blocks.length, "the", chain.lastHash())));
+chain.addBlock(mine(new Block(chain.blocks.length, "blockchain", chain.lastHash())));
 // Failing adds
-chain.addBlock(mine(new Block("failed wrong last hash")));
-chain.addBlock(new Block("failed wrong hash difficulty", chain.lastHash()));
-var changedBlock = mine(new Block("failed wrong hash difficulty", chain.lastHash()));
+chain.addBlock(mine(new Block(100, "failed wrong index")));
+chain.addBlock(mine(new Block(chain.blocks.length, "failed wrong last hash")));
+chain.addBlock(new Block(chain.blocks.length, "failed wrong hash difficulty", chain.lastHash()));
+var changedBlock = mine(new Block(chain.blocks.length, "failed wrong hash difficulty", chain.lastHash()));
 changedBlock.data = "Something else";
 chain.addBlock(changedBlock);
 
-$cl = $('<div class="chain-div"><button class="new-block" onclick="newBlock();">New block</button>\
-  <div class="chain-view">\
-  <ul id="chain0" class="chain"></ul>\
-</div></div>');
-$('.main').append($cl);
+$chain = createChainDOM($('.main'), chain, 0);
+createBlocksDOM($chain, chain);
 
-createBlocks($('#chain0'), chain);
+function createChainDOM(parent, chain, index) {
+  
+  $cl = $('<div class="chain-div"><button class="new-block" onclick="newBlock();">New block</button>\
+            <div class="chain-view">\
+            <ul id="chain'+index+'" class="chain"></ul>\
+          </div></div>');
+  $('.main').append($cl);
 
-function createBlocks(parent, chain) {
+  return $('#chain0');
+}
+
+function createBlocksDOM(parent, chain) {
+  // Prepare the width of the parent so we can stack all the blocks horizontal
   $(parent).width(chain.blocks.length * 440);
+  // 
   $(chain.blocks).each(function(i, block) {
     $block = $(parent).find('.blockitem.index_'+i);
     
@@ -103,7 +112,7 @@ function createBlocks(parent, chain) {
       // Create html 
       $block = $('<li class="blockitem index_'+i+'"> \
         <div class="block">\
-          <h3>Block '+i+'</h3>\
+          <h3>Block '+block.index+'</h3>\
           <div class="input-row">\
             <label>Data:</label>\
             <textarea name="data" rows="5" onkeyup="updateBlock($(this).closest(\'li\'));"></textarea>\
@@ -144,6 +153,8 @@ function showBlockValues(block, $block) {
   }
 }
 
+// Call when changes are made in the block, this reflects the state
+// of the block and updates all the chained hashes.
 function refreshHash(block, $block, idx) {
   $block.find('input[name="hash"]').val(block.hash);
   if (checkHash(block)) {
@@ -162,6 +173,8 @@ function refreshHash(block, $block, idx) {
   }
 }
 
+// Set the current values from the editors in the block. Calls refreshHash
+// to show the effects of changes in the block data.
 function updateBlock($block) {
   // First find the right index of the block
   var idx = $block.data('index');
@@ -172,6 +185,8 @@ function updateBlock($block) {
   refreshHash(block, $block, idx);
 }
 
+// Manually trigger the mining for the block. Calls refreshHash to show
+// the effects of changes in the block data.
 function mineBlock($block) {
   // First find the right index of the block
   var idx = $block.data('index');
@@ -182,11 +197,16 @@ function mineBlock($block) {
   refreshHash(block, $block, idx);
 }
 
+// Append a new block to the chain.
 function newBlock() {
-  var newBlock = new Block("", chain.lastHash());
+  // Create a new block using the values from the last block in the blockchain.
+  var newBlock = new Block(chain.blocks.length, "", chain.lastHash());
+  // And mine the hash to get a valid Proof Of Work.
   mine(newBlock);
+  // When mining is done we can add the block to the blockchain.
   chain.addBlock(newBlock);
-  createBlocks($('#chain0'), chain);
+  // And create the DOM for the new block
+  createBlocksDOM($('#chain0'), chain);
 }
 </script>
     </body>
