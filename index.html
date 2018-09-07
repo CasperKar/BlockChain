@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Blockchain demo</title>
+        <script src="./jquery.min.js"></script>
+        <script src="./sha256.js"></script>
+        <script src="./blockchain.js"></script>
+        <style>
+body  {
+  font-family: Verdana, sans-serif;
+}
+input, textarea, button {
+  border: 2px solid grey;
+  border-radius: 3px;
+  padding: 5px;
+}
+.chain-div {
+  display: block;
+  position: relative;
+  padding: 0;
+  margin: 20px;
+}
+.chain-view {
+  display: block;
+  overflow-x: scroll;
+  border: 3px solid burlywood;
+}
+.chain {
+  display: block;
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+}
+.blockitem {
+  display: inline-block;
+  width: 400px;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  background:bisque;
+}
+.blockitem.correct {
+  background: #90EE90;
+}
+.blockitem.error {
+  background: #FFB6C1;
+}
+.block h3 {
+  display: block;
+  padding: 0;
+  margin: 0 0 10px 0;
+  line-height: 1rem;
+}
+.block .input-row {
+  margin: 3px 0;
+}
+.block label {
+  display: inline-block;
+  width: 70px;
+}
+.block input[type=text],
+.block textarea {
+  width: 300px;
+}
+.new-block {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+}
+        </style>
+    </head>
+    <body>
+      <h1>Blockchain demo</h1>
+      <div class="main"></div>
+
+<script>
+var chain = new BlockChain();
+chain.addBlock(mine(new Block("test", chain.lastHash())));
+chain.addBlock(mine(new Block("the", chain.lastHash())));
+chain.addBlock(mine(new Block("blockchain", chain.lastHash())));
+// Failing adds
+chain.addBlock(mine(new Block("failed wrong last hash")));
+chain.addBlock(new Block("failed wrong hash difficulty", chain.lastHash()));
+var changedBlock = mine(new Block("failed wrong hash difficulty", chain.lastHash()));
+changedBlock.data = "Something else";
+chain.addBlock(changedBlock);
+
+$cl = $('<div class="chain-div"><button class="new-block" onclick="newBlock();">New block</button>\
+  <div class="chain-view">\
+  <ul id="chain0" class="chain"></ul>\
+</div></div>');
+$('.main').append($cl);
+
+createBlocks($('#chain0'), chain);
+
+function createBlocks(parent, chain) {
+  $(parent).width(chain.blocks.length * 440);
+  $(chain.blocks).each(function(i, block) {
+    $block = $(parent).find('.blockitem.index_'+i);
+    
+    if ($block.length === 0) {
+      // Create html 
+      $block = $('<li class="blockitem index_'+i+'"> \
+        <div class="block">\
+          <h3>Block '+i+'</h3>\
+          <div class="input-row">\
+            <label>Data:</label>\
+            <textarea name="data" rows="5" onkeyup="updateBlock($(this).closest(\'li\'));"></textarea>\
+          </div>\
+          <div class="input-row">\
+              <label>Nonce:</label>\
+              <input name="nonce" type="text" onkeyup="updateBlock($(this).closest(\'li\'));">\
+          </div>\
+          <div class="input-row">\
+              <label>Prev:</label>\
+              <input name="prev" type="text" disabled="disabled">\
+          </div>\
+          <div class="input-row">\
+              <label>Hash:</label>\
+              <input name="hash" type="text" disabled="disabled">\
+          </div>\
+          <div class="input-row">\
+            <input name="mine" type="button" value="Mine" onclick="mineBlock($(this).closest(\'li\'));">\
+          </div>\
+        </div>\
+      </li>');
+      $block.data('index', i).appendTo(parent);
+    }
+    
+    showBlockValues(block, $block);
+  });
+}
+
+function showBlockValues(block, $block) {
+  $block.find('textarea[name="data"]').val(block.data);
+  $block.find('input[name="nonce"]').val(block.nonce);
+  $block.find('input[name="prev"]').val(block.prevHash);
+  $block.find('input[name="hash"]').val(block.hash);
+  if (checkHash(block)) {
+    $block.removeClass('error').addClass('correct');
+  } else {
+    $block.removeClass('correct').addClass('error');
+  }
+}
+
+function refreshHash(block, $block, idx) {
+  $block.find('input[name="hash"]').val(block.hash);
+  if (checkHash(block)) {
+    $block.removeClass('error').addClass('correct');
+  } else {
+    $block.removeClass('correct').addClass('error');
+  }
+
+  var $parent = $block.closest('ul');
+  for (i = idx+1; i < chain.blocks.length; i++) {
+    // First upfate the prev
+    chain.blocks[i].setPrevHash(block.hash);
+    // then set the current index as previous block
+    block = chain.blocks[i];
+    showBlockValues(block, $parent.find('.blockitem.index_'+i));
+  }
+}
+
+function updateBlock($block) {
+  // First find the right index of the block
+  var idx = $block.data('index');
+  block = chain.blocks[idx];
+  block.setData($block.find('textarea[name="data"]').val());
+  block.setNonce($block.find('input[name="nonce"]').val());
+
+  refreshHash(block, $block, idx);
+}
+
+function mineBlock($block) {
+  // First find the right index of the block
+  var idx = $block.data('index');
+  block = chain.blocks[idx];
+  mine(block);
+  $block.find('input[name="nonce"]').val(block.nonce);
+
+  refreshHash(block, $block, idx);
+}
+
+function newBlock() {
+  var newBlock = new Block("", chain.lastHash());
+  mine(newBlock);
+  chain.addBlock(newBlock);
+  createBlocks($('#chain0'), chain);
+}
+</script>
+    </body>
+</html>
