@@ -1,0 +1,67 @@
+/*
+ * Blockchain demo stylesheet
+ * 
+ * Created on: Sep 7, 2018
+ * Author: C.Karreman
+ */
+body  {
+    font-family: Verdana, sans-serif;
+}
+input, textarea, button {
+    border: 2px solid grey;
+    border-radius: 3px;
+    padding: 5px;
+}
+.chain-div {
+    display: block;
+    position: relative;
+    padding: 0;
+    margin: 20px;
+}
+.chain-view {
+    display: block;
+    overflow-x: scroll;
+    border: 3px solid burlywood;
+}
+.chain {
+    display: block;
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+}
+.blockitem {
+    display: inline-block;
+    width: 400px;
+    margin: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    background:bisque;
+}
+.blockitem.correct {
+    background: #90EE90;
+}
+.blockitem.error {
+    background: #FFB6C1;
+}
+.block h3 {
+    display: block;
+    padding: 0;
+    margin: 0 0 10px 0;
+    line-height: 1rem;
+}
+.block .input-row {
+    margin: 3px 0;
+}
+.block label {
+    display: inline-block;
+    width: 70px;
+}
+.block input[type=text],
+.block textarea {
+    width: 300px;
+}
+.new-block {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+}
