@@ -2,7 +2,7 @@
  * Blockchain demo stylesheet
  * 
  * Created on: Sep 7, 2018
- * Author: C.Karreman
+ * Author: C.Karreman (0931371)
  */
 body  {
     font-family: Verdana, sans-serif;
@@ -74,4 +74,7 @@ input, textarea, button {
 .block input[type=text],
 .block textarea {
     width: 300px;
+}
+.block .mineStats {
+    font-size: 10px;
 }

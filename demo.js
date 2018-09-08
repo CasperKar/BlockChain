@@ -4,13 +4,16 @@
  * Creates a blockchain node and dosplays it in the current html page.
  * 
  * Created on: Sep 7, 2018
- * Author: C.Karreman
+ * Author: C.Karreman (0931371)
+ * 
+ * Requires: jQuery v2.1.4, blockchain v0.2
  */
 ;(function($) {
 
     $.demo = (function() {
 
         var chainNodes = [],
+            preventChangeEvent = 0,
             createChainDOM = function(parent, blockchain) {
                 var index = chainNodes.indexOf(blockchain),
                     chainDOM = $('#chain'+index);
@@ -57,7 +60,8 @@
                                     </div>\
                                     <div class="input-row">\
                                         <label>Nonce:</label>\
-                                        <input name="nonce" type="text">\
+                                        <input name="nonce" type="number">\
+                                        <span class="mineStats"></span>\
                                     </div>\
                                     <div class="input-row">\
                                         <label>Prev:</label>\
@@ -68,14 +72,17 @@
                                         <input name="hash" type="text" disabled="disabled">\
                                     </div>\
                                     <div class="input-row">\
-                                        <input name="mine" type="button" value="Mine">\
+                                    <input name="rehash" type="button" value="Hash">\
+                                    <input name="mine" type="button" value="Mine">\
                                     </div>\
                                 </div>\
                             </li>');
                         blockDOM.data('index', i).appendTo(parent);
 
                         // And add events
-                        blockDOM.find('input[name=nonce], textarea[name=data]').keyup(updateBlock);
+                        blockDOM.find('textarea[name=data]').keyup(updateBlock);
+                        blockDOM.find('input[name=nonce]').change(updateBlock);
+                        blockDOM.find('input[name=rehash]').click(hashBlock);
                         blockDOM.find('input[name=mine]').click(mineBlock);
                     }
                     
@@ -83,26 +90,31 @@
                 });
             },
             showBlockValues = function(block, blockDOM) {
+                preventChangeEvent++;
                 blockDOM.find('textarea[name="data"]').val(block.data);
                 blockDOM.find('input[name="nonce"]').val(block.nonce);
+                blockDOM.find('span.mineStats').text(block.mineAttempts+' attempts');
                 blockDOM.find('input[name="prev"]').val(block.prevHash);
                 // And show the hash and validation result
-                showBlockHash(block, blockDOM);
+                showBlockState(block, blockDOM);
+                preventChangeEvent--;
             },
-            showBlockHash = function(block, blockDOM) {
+            showBlockState = function(block, blockDOM) {
+                preventChangeEvent++;
                 blockDOM.find('input[name="hash"]').val(block.hash);
-                if (checkHash(block)) {
+                if (BlockChainHelper.checkHash(block)) {
                     blockDOM.removeClass('error').addClass('correct');
                 } else {
                     blockDOM.removeClass('correct').addClass('error');
                 }
+                preventChangeEvent--;
             },
             // Call when changes are made in the block, this reflects the state
             // of the block and updates all the chained hashes.
-            refreshHash = function(blockchain, idx, blockDOM) {
+            refreshBlockState = function(blockchain, idx, blockDOM) {
                 var block = blockchain.blocks[idx];
                 // First show the hash and validation result
-                showBlockHash(block, blockDOM);
+                showBlockState(block, blockDOM);
             
                 // Then walk all following blocks to update their state
                 var parent = blockDOM.closest('ul');
@@ -127,9 +139,9 @@
                 // Create a new block using the values from the last block in the blockchain.
                 var bc = getBlockChain(e.target),
                     chainDOM = $(e.target).closest('.chain-div'),
-                    newBlock = new Block(bc.blocks.length, "", bc.lastHash());
+                    newBlock = new Block(bc.blocks.length, bc.lastHash());
                 // And mine the hash to get a valid Proof Of Work.
-                mine(newBlock);
+                BlockChainHelper.mine(newBlock);
                 // When mining is done we can add the block to the blockchain.
                 bc.submitBlock(newBlock);
                 // And create the DOM for the new block
@@ -139,15 +151,41 @@
             // Set the current values from the editors in the block. Calls refreshHash
             // to show the effects of changes in the block data.
             updateBlock = function(ev) {
+                if (preventChangeEvent != 0) return;
+
+                // First find the right block and chain-index of the block
+                var blockDOM = $(ev.target).closest('li'),
+                    idx = blockDOM.data('index'),
+                    bc = getBlockChain(blockDOM),
+                    block = bc.blocks[idx];
+
+                // With generating new hash for the block
+                //block.setData(blockDOM.find('textarea[name="data"]').val());
+                //block.setNonce(blockDOM.find('input[name="nonce"]').val());
+                // Without generating new hash for the block.
+                block.data = blockDOM.find('textarea[name="data"]').val();
+                block.nonce = blockDOM.find('input[name="nonce"]').val();
+
+                refreshBlockState(bc, idx, blockDOM);
+            },
+            
+            // Manually trigger the rehash for the block. Calls refreshHash to show
+            // the effects of changes in the block data.
+            hashBlock = function(ev) {
                 // First find the right block and chain-index of the block
                 var blockDOM = $(ev.target).closest('li'),
                     idx = blockDOM.data('index'),
                     bc = getBlockChain(blockDOM);
                 block = bc.blocks[idx];
-                block.setData(blockDOM.find('textarea[name="data"]').val());
-                block.setNonce(blockDOM.find('input[name="nonce"]').val());
-            
-                refreshHash(bc, idx, blockDOM);
+                // Call rehash
+                block.reHash();
+                // Show the result nonce
+                preventChangeEvent++;
+                blockDOM.find('input[name="nonce"]').val(block.nonce);
+                blockDOM.find('span.mineStats').text(block.mineAttempts+' attempts');
+                preventChangeEvent--;
+                // And update block states
+                refreshBlockState(bc, idx, blockDOM);
             },
             
             // Manually trigger the mining for the block. Calls refreshHash to show
@@ -159,11 +197,14 @@
                     bc = getBlockChain(blockDOM);
                 block = bc.blocks[idx];
                 // Start the mining
-                mine(block);
+                BlockChainHelper.mine(block);
                 // Show the result nonce
+                preventChangeEvent++;
                 blockDOM.find('input[name="nonce"]').val(block.nonce);
+                blockDOM.find('span.mineStats').text(block.mineAttempts+' attempts');
+                preventChangeEvent--;
                 // And update block states
-                refreshHash(bc, idx, blockDOM);
+                refreshBlockState(bc, idx, blockDOM);
             };
             
         return {
@@ -171,14 +212,14 @@
                 // Create an initial BlockChain and add some blocks
                 var bc = new BlockChain();
                 // Initialize a few blocks
-                bc.submitBlock(new Block(bc.nextIndex(), "test", bc.lastHash()));
-                bc.submitBlock(new Block(bc.nextIndex(), "the", bc.lastHash()));
-                bc.submitBlock(new Block(bc.nextIndex(), "blockchain", bc.lastHash()));
-                // Failing adds
-                bc.submitBlock(new Block(100, "failed wrong index"));
-                bc.submitBlock(new Block(bc.nextIndex(), "failed wrong last hash"));
-                bc.addBlock(new Block(bc.nextIndex(), "failed wrong hash difficulty", bc.lastHash()));
-                var changedBlock = mine(new Block(bc.nextIndex(), "failed wrong hash difficulty", bc.lastHash()));
+                bc.submitBlock(new Block(bc.nextIndex(), bc.lastHash(), "test"));
+                bc.submitBlock(new Block(bc.nextIndex(), bc.lastHash(), "the"));
+                bc.submitBlock(new Block(bc.nextIndex(), bc.lastHash(), "blockchain"));
+                // Failing blocks
+                bc.submitBlock(new Block(100, bc.lastHash(), "failed wrong index"));
+                bc.submitBlock(new Block(bc.nextIndex(), null, "failed wrong last hash"));
+                bc.addBlock(new Block(bc.nextIndex(), bc.lastHash(), "failed wrong hash difficulty").reHash());
+                var changedBlock = BlockChainHelper.mine(new Block(bc.nextIndex(), bc.lastHash(), "Original data"));
                 changedBlock.data = "Something else";
                 bc.addBlock(changedBlock);
 
