@@ -215,6 +215,8 @@
                 bc.submitBlock(new Block(bc.nextIndex(), bc.lastHash(), "the"));
                 bc.submitBlock(new Block(bc.nextIndex(), bc.lastHash(), "blockchain"));
                 // Failing blocks
+                bc.submitBlock("not an object");
+                bc.submitBlock({data: "fake object", hash: "817f87314fe87fe1e91ef1ef9f8e"})
                 bc.submitBlock(new Block(100, bc.lastHash(), "failed wrong index"));
                 bc.submitBlock(new Block(bc.nextIndex(), null, "failed wrong last hash"));
                 bc.addBlock(new Block(bc.nextIndex(), bc.lastHash(), "failed wrong hash difficulty").reHash());

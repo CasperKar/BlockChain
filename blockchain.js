@@ -66,6 +66,16 @@ function BlockChain() {
 
         // Checks the block for next in chain and integrity.
         checkBlock: function(block) {
+            // Base case, no block at all
+            if (!block || typeof block !== 'object') return false;
+            // Check block for fields
+            var props = Object.keys(block);
+            if (!props.includes('index') ||
+                !props.includes('prevHash') ||
+                !props.includes('data') ||
+                !props.includes('nonce') ||
+                !props.includes('hash')) return false;
+            
             // Check index of new block
             if (this.blocks.length !== block.index) return false;
             // Check last block hash is prev hash on new block
