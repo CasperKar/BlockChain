@@ -119,10 +119,9 @@
                 // Then walk all following blocks to update their state
                 var parent = blockDOM.closest('ul');
                 for (i = idx+1; i < blockchain.blocks.length; i++) {
-                    // First upfate the prev
-                    blockchain.blocks[i].setPrevHash(block.hash);
-                    // then set the current index as previous block
-                    block = blockchain.blocks[i];
+                    // Update the previous hash and remember the current block
+                    // for the next step.
+                    block = blockchain.blocks[i].setPrevHash(block.hash);
                     showBlockValues(block, parent.find('.blockitem.index_'+i));
                 }
             },
@@ -139,7 +138,7 @@
                 // Create a new block using the values from the last block in the blockchain.
                 var bc = getBlockChain(e.target),
                     chainDOM = $(e.target).closest('.chain-div'),
-                    newBlock = new Block(bc.blocks.length, bc.lastHash());
+                    newBlock = new Block(bc.nextIndex(), bc.lastHash());
                 // And mine the hash to get a valid Proof Of Work.
                 BlockChainHelper.mine(newBlock);
                 // When mining is done we can add the block to the blockchain.
