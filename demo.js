@@ -225,7 +225,7 @@
                 bc.addBlock(changedBlock);
 
                 chainNodes.push(bc);
-                chainNodes.push(bc.clone());
+                //chainNodes.push(bc.clone());
 
                 // Create the demo element where all the chains will be shown
                 $(document.body).append($('<div class="chainDemo"></div>'));
