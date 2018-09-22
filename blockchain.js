@@ -12,12 +12,17 @@
 // of the block in the chain. This model is set up to be in a Proof Of Work
 // blockchain.
 function Block(index, prevHash, data) {
+
     return {
+        // Header part
         index: index,
         prevHash: prevHash || "0".repeat(64),
-        data: data || "",
+        merkleRoot: BlockchainHelper.merkleTree(data || "").root,
         nonce: 0,
-        hash: BlockChainHelper.hashBlock(this),
+        // Data part
+        data: data || "",
+        difficulty: 0,
+        hash: BlockchainHelper.hashBlock(this),
         mineAttempts: 0, // Not used as data, only for mining statistics
     
         // Set the previous hash and recalculate the block hash.
@@ -30,6 +35,7 @@ function Block(index, prevHash, data) {
         //           Right now there are no requirements for the data.
         setData: function(data) {
             this.data = data;
+            this.merkleRoot = BlockchainHelper.merkleTree(data).root;
             return this.reHash(this);
         },
         // Set the nonce and recalculate the block hash.
@@ -40,7 +46,7 @@ function Block(index, prevHash, data) {
         // Recacluate the hash for this block using the current data.
         reHash: function() {
             // calculate a SHA256 hash of the contents of the block
-            this.hash = BlockChainHelper.hashBlock(this);
+            this.hash = BlockchainHelper.hashBlock(this);
             return this;
         },
         // Return an exact copy of this block.
@@ -49,6 +55,8 @@ function Block(index, prevHash, data) {
             c.nonce = this.nonce;
             c.hash = this.hash;
             c.mineAttempts = this.mineAttempts;
+            c.difficulty = this.difficulty;
+    
             return c;
         }
     };
@@ -60,9 +68,15 @@ function Block(index, prevHash, data) {
 // to keep the chain consistent. Later alterations can be detected by checking
 // the blocks hashes and references to previous blocks.
 // The genesis block has a previous hash of all zeros (64).
-function BlockChain() {
+function Blockchain() {
     return {
+        // Array with the blcoks in the chain.
         blocks: [],
+
+        // Changed is an event that is called when the blockchain changed. The 
+        // event is called with the Blockchain and the index of the added block
+        // as parameters: changed(this, index);
+        changed: undefined,
 
         // Checks the block for next in chain and integrity.
         checkBlock: function(block) {
@@ -72,6 +86,7 @@ function BlockChain() {
             var props = Object.keys(block);
             if (!props.includes('index') ||
                 !props.includes('prevHash') ||
+                !props.includes('merkleRoot') ||
                 !props.includes('data') ||
                 !props.includes('nonce') ||
                 !props.includes('hash')) return false;
@@ -81,6 +96,9 @@ function BlockChain() {
             // Check last block hash is prev hash on new block
             if (this.blocks.length === 0 && block.prevHash != "0".repeat(64)) return false;
             if (this.blocks.length > 0 && block.prevHash != this.lastHash()) return false;
+
+            // Check merkleRoot hash
+            if (!BlockchainHelper.checkMerkleRoot(block)) return false;
 
             // TODO: Check integrety by validating the signature of the data
             //       (not yet implemented in this blockchain)
@@ -95,8 +113,8 @@ function BlockChain() {
             // First do block checks
             if (!this.checkBlock(block)) return false;
 
-            // TODO: distribute block to miners
-            return this.addBlock(BlockChainHelper.mine(block));
+            // Distribute block to miners
+            return BlockchainHelper.mine(block, this);
         },
 
         // Add a new block to the blockchain. Before allowing the new block to 
@@ -109,11 +127,20 @@ function BlockChain() {
             // Check the hash for the new block, does the has match the hash
             // of the block header and then check if the hash is made with the
             // right difficulty(mined)
-            if (!BlockChainHelper.checkHash(block)) return false;
+            if (!BlockchainHelper.checkHash(block)) return false;
     
             // All checks passed, push the block in the chain.
-            this.blocks.push(block);
-            return true;
+            var newLength = this.blocks.push(block);
+
+            // Call the changed event.
+            if (this.changed && typeof this.changed === "function") {
+                try {
+                    this.changed(this, newLength-1);
+                }
+                catch {}
+            }
+
+            return block;
         },
 
         // Return the index for the next block to be added. Use this value for
@@ -133,10 +160,19 @@ function BlockChain() {
                 : undefined;
         },
 
+        // Summerize the difficulty of all blocks
+        sumChain: function() {
+            var sumDiff = 0;
+            this.blocks.forEach(function(item) {
+                sumDiff += item.difficulty;
+            });
+            return sumDiff;
+        },
+
         // Return an exact copy of this blockchain. Use it to quickly create a
         // new full node.
         clone: function() {
-            var bc = new BlockChain();
+            var bc = new Blockchain();
             // Copy all the blocks to the new chain. Use clones of the blocks
             // to be sure to have new instances.
             this.blocks.forEach(block => bc.blocks.push(block.clone()));
@@ -146,10 +182,11 @@ function BlockChain() {
     };
 }
 
+
 // The blockchainhelper is a constant class (static) that can be used to create
 // and verify block hashes or to mine a nonce for a block that must be placed 
 // in the blockchain.
-const BlockChainHelper = (function() {
+const BlockchainHelper = (function() {
     var difficulty = 3, // number of zeros required at front of hash (hexadecimal presentation)
         hashStart = "0".repeat(difficulty),
         // Set minePredictable to true to be able to regenerate the same nonce
@@ -166,6 +203,23 @@ const BlockChainHelper = (function() {
         };
 
     return {
+        // Generates a merkle tree from the data and updates it in the block.
+        merkleTree: function(data) {
+            // This is a dummy because we do not implement transactions. We do
+            // however mimick the function to generate a merkle root. That is 
+            // the value where the block hash is generated with.
+            return {
+                tree: data,
+                root: CryptoJS.SHA256(data)
+            };
+        },
+
+        // Checks the merkle root against the block data / merkle tree
+        checkMerkleRoot: function(block) {
+            var merkleTree = BlockchainHelper.merkleTree(block.data);
+            return block.merkleRoot.toString() == merkleTree.root.toString();
+        },
+
         // Function to generate the hash value for a block. The hash is returned as a
         // hex string from the calculated hash.
         hashBlock: function(block) {
@@ -174,11 +228,11 @@ const BlockChainHelper = (function() {
             // in the hashing value are made with a static length. Numbers are 
             // converted to a hex presentation padded with 0 and the data is hashed
             // before inserting in the value.
-            return CryptoJS.SHA256(numberToHex(block.index) + block.prevHash + CryptoJS.SHA256(block.data) + numberToHex(block.nonce)).toString(CryptoJS.enc.Hex);
+            return CryptoJS.SHA256(numberToHex(block.index) + block.prevHash + block.merkleRoot + numberToHex(block.nonce)).toString(CryptoJS.enc.Hex);
         },
 
         checkHash: function(block) {
-            return (BlockChainHelper.hashBlock(block) == block.hash
+            return (BlockchainHelper.hashBlock(block) == block.hash
                 && block.hash.startsWith(hashStart)
                 );
         },
@@ -186,7 +240,8 @@ const BlockChainHelper = (function() {
         // Mine for a hash which starts with the number of leading zero's in hex 
         // presentation. The number of leading zero's is set in the difficulty 
         // variable.
-        mine: function(block) {
+        // TODO: Distribute to the miners network instead of doing this inline.
+        mine: function(block, chain) {
             var attempt = 0,
                 maxAttempts = 500000;
 
@@ -199,7 +254,7 @@ const BlockChainHelper = (function() {
                 // nonce every time the same block is mined. 
                 block.setNonce(0);
                 while (++attempt < maxAttempts) {
-                    if (BlockChainHelper.checkHash(block.setNonce(block.nonce+1))) break;
+                    if (BlockchainHelper.checkHash(block.setNonce(block.nonce+1))) break;
                 }
             } else {
                 // This is the crypto random implementation that should be able to
@@ -209,12 +264,16 @@ const BlockChainHelper = (function() {
                 var nonce = new Uint32Array(1);
                 while (++attempt < maxAttempts) {
                     window.crypto.getRandomValues(nonce);
-                    if (BlockChainHelper.checkHash(block.setNonce(nonce[0]))) break;
+                    if (BlockchainHelper.checkHash(block.setNonce(nonce[0]))) break;
                 }
             }
 
             // Save mining statistics
+            block.difficulty = difficulty;
             block.mineAttempts = attempt;
+
+            // When the block is mined and the blockchain is given, add the block.
+            if (chain) chain.addBlock(block);
 
             return block;
         }
