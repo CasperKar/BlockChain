@@ -161,19 +161,22 @@
 
                     // Distribute to other Nodes
                     chainNodes.forEach(function(item, index) {
+                        var disableChain = function(index) {
+                            $('#chain'+index).addClass('bad').find('.new-block').prop('disabled', true);
+                        };
+
                         // Check not triggering node
                         if (index != nodeId) {
                             // Add blocks while new are still available
                             while(item.nextIndex() <= idx && idx < blockchain.nextIndex()) {
-                                if (item.addBlock(blockchain.blocks[item.nextIndex()]) === false) {
+                                if (item.addBlock(blockchain.blocks[item.nextIndex()].clone()) === false) {
                                     // Adding block failed, probably inconsistant data. 
                                     // Check the longest chain and flag the other bad.
                                     if (item.sumChain() < blockchain.sumChain()) {
-                                        $('#chain'+index).addClass('bad');
+                                        disableChain(index);
                                     } else if (item.sumChain() > blockchain.sumChain()) {
-                                        $('#chain'+nodeId).addClass('bad');
+                                        disableChain(nodeId);
                                     }
-
                                     break;
                                 }
                             }
@@ -201,7 +204,17 @@
                 chainNodes.push(bc);
                 createChainDOM($(ev.target).parent(), bc);
                 // And call distribute to fill the blocks
-                setTimeout(function() { distributeBlocks(chainNodes[0], chainNodes[0].nextIndex()-1); }, 400);
+                setTimeout(function() { 
+                    // First find the node with the biggest POW
+                    var maxPow = 0, nodeIndex = 0;
+                    chainNodes.forEach((node,i) => {
+                        if (node.sumChain() > maxPow) {
+                            nodeIndex = i;
+                            maxPow = node.sumChain();
+                        }
+                    });
+                    distributeBlocks(chainNodes[nodeIndex], chainNodes[nodeIndex].nextIndex()-1); 
+                }, 400);
             }
 
             // Ask for the data to put in the block
