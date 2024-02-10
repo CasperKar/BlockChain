@@ -1,0 +1,130 @@
+/*
+ * Blockchain demo stylesheet
+ *
+ * Created on: Sep 7, 2018
+ * Author: C.Karreman (0931371)
+ */
+input, textarea, button {
+    border: 2px solid grey;
+    border-radius: 3px;
+    padding: 5px;
+}
+input[type="button"], button {
+    min-width: 60px;
+}
+input[type="button"]:hover:enabled, button:hover:enabled {
+  background: #555;
+  box-shadow: 1px 3px 3px #333;
+}
+input[type="button"]:active:enabled, button:active:enabled {
+  box-shadow: 1px 2px 1px #333;
+}
+input[type="number"] {
+    width: 160px;
+}
+.center {
+    text-align: center;
+}
+.gitlink {
+    position: absolute;
+    right: 30px;
+    top: 5px;
+    font-size: 0.8em;
+}
+#chainDemo {
+    margin: 0 -20px;
+}
+#add-node {
+    position: absolute;
+    right: 20px;
+    top: 35px;
+}
+.chain-div {
+    display: block;
+    position: relative;
+    padding: 0;
+    margin: 20px;
+}
+.chain-div>h2 {
+    position: relative;
+    left: 0;
+    right: 0;
+    top: 0;
+    margin: 0;
+    padding: 5px 20px;
+    text-align: left;
+}
+.chain-div>.chain-actions {
+    position: absolute;
+    right: 20px;
+    top: 10px;
+}
+.chain-view {
+    display: block;
+    overflow-x: scroll;
+    background: rgba(206, 210, 226, 0.5);
+}
+.chain-div.bad .chain-view {
+    background: #FFB6C1;
+}
+.chain {
+    display: block;
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+}
+.blockitem {
+    display: inline-block;
+    width: 400px;
+    margin: 10px;
+    padding: 7px;
+    background: #50505088;
+    text-align: left;
+    scroll-margin-right: 10px;
+}
+.blockitem h3 {
+    background: aliceblue;
+}
+.blockitem.correct h3 {
+    background: #90EE90;
+}
+.blockitem.error h3 {
+    background: #FFB6C1;
+}
+.block h3 {
+    display: block;
+    color: #555;
+    padding: 3px;
+    margin: -5px -5px 5px -5px;
+
+}
+.block .input-row {
+    margin: 3px 0;
+}
+.block label {
+    display: inline-block;
+    width: 70px;
+}
+.block input[type=text],
+.block textarea {
+    width: 310px;
+}
+.block textarea {
+    min-width: 310px;
+    max-width: 310px;
+    height: 5em;
+    min-height: 5em;
+}
+.block .mineStats {
+    font-size: 10px;
+}
+.dialog.overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(240, 240, 240, 0.8);
+    text-align: center;
+    padding: 20px;
+}

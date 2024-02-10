@@ -1,22 +1,23 @@
 /*
  * Blockchain demo
- * 
+ *
  * Creates a blockchain node and dosplays it in the current html page.
- * 
+ *
  * Created on: Sep 7, 2018
  * Author: C.Karreman (0931371)
- * 
+ *
  * Requires: jQuery v2.1.4, blockchain v0.2
  */
 ;(function($) {
 
     $.demo = (function() {
 
-        var chainNodes = [],
-            preventChangeEvent = 0,
-            createChainDOM = function(parent, blockchain) {
-                var index = chainNodes.indexOf(blockchain),
-                    chainDOM = $('#chain'+index);
+        let chainNodes = [],
+            preventChangeEvent = 0;
+
+        const createChainDOM = function(parent, blockchain) {
+                const index = chainNodes.indexOf(blockchain);
+                let chainDOM = $('#chain'+index);
 
                 if (chainDOM.length === 0) {
                     // create html DOM
@@ -41,19 +42,18 @@
 
                 // And create the chain nodes
                 createBlocksDOM(chainDOM, blockchain)
-            
+
                 return chainDOM;
             },
             createBlocksDOM = function(chainDOM, blockchain) {
                 // Prepare the width of the parent so we can stack all the blocks horizontal
-                var parent = chainDOM.find('ul.chain');
-                $(parent).width(blockchain.blocks.length * 440);
+                const parent = chainDOM.find('ul.chain');
                 // Walk the blocks and create a DOM for each block when it does not yet exists
                 $(blockchain.blocks).each(function(i, block) {
-                    var blockDOM = $(parent).find('li.blockitem.index_'+i);
-                    
+                    let blockDOM = $(parent).find('li.blockitem.index_'+i);
+
                     if (blockDOM.length === 0) {
-                        // Create html 
+                        // Create html
                         blockDOM = $('\
                             <li class="blockitem index_'+i+'">\
                                 <div class="block">\
@@ -89,9 +89,14 @@
                         blockDOM.find('input[name=rehash]').click(hashBlock);
                         blockDOM.find('input[name=mine]').click(mineBlock);
                     }
-                    
+
                     showBlockValues(block, blockDOM);
                 });
+                const blockWidth = $(parent).children(":first").outerWidth(true);
+                $(parent).width(blockchain.blocks.length * blockWidth);
+                $(parent).parent()
+                    .stop()
+                    .animate({scrollLeft: blockchain.blocks.length * blockWidth - $(parent).parent().width()}, 800);
             },
             showBlockValues = function(block, blockDOM) {
                 preventChangeEvent++;
@@ -110,7 +115,7 @@
             showBlockState = function(block, blockDOM) {
                 preventChangeEvent++;
                 blockDOM.find('input[name="hash"]').val(block.hash);
-                if (BlockchainHelper.checkMerkleRoot(block) && 
+                if (BlockchainHelper.checkMerkleRoot(block) &&
                     BlockchainHelper.checkHash(block)) {
                     blockDOM.removeClass('error').addClass('correct');
                 } else {
@@ -121,12 +126,12 @@
             // Call when changes are made in the block, this reflects the state
             // of the block and updates all the chained hashes.
             refreshBlockState = function(blockchain, idx, blockDOM) {
-                var block = blockchain.blocks[idx];
+                let block = blockchain.blocks[idx];
                 // First show the hash and validation result
                 showBlockState(block, blockDOM);
-            
+
                 // Then walk all following blocks to update their state
-                var parent = blockDOM.closest('ul');
+                const parent = blockDOM.closest('ul');
                 for (i = idx+1; i < blockchain.blocks.length; i++) {
                     // Update the previous hash and remember the current block
                     // for the next step.
@@ -137,8 +142,8 @@
 
             // Change event for the blockchain
             blockchainChanged = function(blockchain, idx) {
-                var nodeId = chainNodes.indexOf(blockchain),
-                    chainDOM = $('#chain'+nodeId);
+                const nodeId = chainNodes.indexOf(blockchain);
+                const chainDOM = $('#chain'+nodeId);
 
                 // And create the DOM for the new block
                 createBlocksDOM(chainDOM, blockchain);
@@ -146,7 +151,7 @@
                 // Now skip distribution when preventchanges is set
                 if (preventChangeEvent != 0) return;
 
-                // And delayed distribute the new block, this way it looks real 
+                // And delayed distribute the new block, this way it looks real
                 // with local nodes.
                 setTimeout(function() { distributeBlocks(blockchain, idx); }, 400);
             },
@@ -157,11 +162,11 @@
                 // Prevent event storm
                 preventChangeEvent++;
                 try {
-                    var nodeId = chainNodes.indexOf(blockchain);
+                    const nodeId = chainNodes.indexOf(blockchain);
 
                     // Distribute to other Nodes
                     chainNodes.forEach(function(item, index) {
-                        var disableChain = function(index) {
+                        const disableChain = function(index) {
                             $('#chain'+index).addClass('bad').find('.new-block').prop('disabled', true);
                         };
 
@@ -169,8 +174,11 @@
                         if (index != nodeId) {
                             // Add blocks while new are still available
                             while(item.nextIndex() <= idx && idx < blockchain.nextIndex()) {
-                                if (item.addBlock(blockchain.blocks[item.nextIndex()].clone()) === false) {
-                                    // Adding block failed, probably inconsistant data. 
+                                if (item.addBlock(blockchain.blocks[item.nextIndex()].clone())) {
+                                    // Untill here, the node is OK
+                                    $('#chain'+index).removeClass('bad').find('.new-block').prop('disabled', false);
+                                } else {
+                                    // Adding block failed, probably inconsistant data.
                                     // Check the longest chain and flag the other bad.
                                     if (item.sumChain() < blockchain.sumChain()) {
                                         disableChain(index);
@@ -182,45 +190,45 @@
                             }
                         }
                     });
-                } 
+                }
                 finally {
                     preventChangeEvent--;
                 }
             },
 
-            
+
             // Returns the blockchain node for the DOM element.
             getBlockchain = function(elem) {
-                var chainDOM = $(elem).closest('.chain-div'),
-                    chainIndex = chainDOM.data('index');
+                const chainDOM = $(elem).closest('.chain-div');
+                const chainIndex = chainDOM.data('index');
 
                 return chainNodes[chainIndex];
             },
 
             // Create a new node and show it in the browser.
             addNode = function(ev) {
-                var bc = new Blockchain();
+                const bc = new Blockchain();
                 bc.changed = blockchainChanged;
                 chainNodes.push(bc);
                 createChainDOM($(ev.target).parent(), bc);
                 // And call distribute to fill the blocks
-                setTimeout(function() { 
+                setTimeout(function() {
                     // First find the node with the biggest POW
-                    var maxPow = 0, nodeIndex = 0;
+                    let maxPow = 0, nodeIndex = 0;
                     chainNodes.forEach((node,i) => {
                         if (node.sumChain() > maxPow) {
                             nodeIndex = i;
                             maxPow = node.sumChain();
                         }
                     });
-                    distributeBlocks(chainNodes[nodeIndex], chainNodes[nodeIndex].nextIndex()-1); 
+                    distributeBlocks(chainNodes[nodeIndex], chainNodes[nodeIndex].nextIndex()-1);
                 }, 400);
             }
 
             // Ask for the data to put in the block
             newBlock = function(ev) {
-                var chainDOM = $(ev.target).closest('.chain-div'),
-                    dataDialog = $('\
+                const chainDOM = $(ev.target).closest('.chain-div');
+                const dataDialog = $('\
                     <div class="dialog overlay">\
                         <div class="blockitem block">\
                             <h3>New block</h3>\
@@ -246,17 +254,17 @@
             },
             // Cancel the data request dialog
             cancelBlock = function(ev) {
-                var chainDOM = $(ev.target).closest('.chain-div');
+                const chainDOM = $(ev.target).closest('.chain-div');
                 chainDOM.find('.dialog.overlay').remove();
             },
             // Create a new block and add is to the chain.
             addBlock = function(ev) {
                 // Create a new block using the values from the last block in the blockchain.
-                var bc = getBlockchain(ev.target),
-                    chainDOM = $(ev.target).closest('.chain-div'),
-                    data = chainDOM.find('.dialog textarea[name="data"]').val(),
-                    distribute = chainDOM.find('.dialog input[name="distribute"]').is(':checked'),
-                    newBlock = new Block(bc.nextIndex(), bc.lastHash(), data);
+                const bc = getBlockchain(ev.target);
+                const chainDOM = $(ev.target).closest('.chain-div');
+                const data = chainDOM.find('.dialog textarea[name="data"]').val();
+                const distribute = chainDOM.find('.dialog input[name="distribute"]').is(':checked');
+                const newBlock = new Block(bc.nextIndex(), bc.lastHash(), data);
 
                 // Submit block to the blockchain, it will be mined and added to the chain.
                 if (distribute) {
@@ -266,11 +274,10 @@
                     preventChangeEvent++;
                     try {
                         bc.submitBlock(newBlock);
-                    } 
+                    }
                     finally {
                         preventChangeEvent--;
                     }
-      
                 }
 
                 // Remove the dialog
@@ -283,10 +290,10 @@
                 if (preventChangeEvent != 0) return;
 
                 // First find the right block and chain-index of the block
-                var blockDOM = $(ev.target).closest('li'),
-                    idx = blockDOM.data('index'),
-                    bc = getBlockchain(blockDOM),
-                    block = bc.blocks[idx];
+                const blockDOM = $(ev.target).closest('li');
+                const idx = blockDOM.data('index');
+                const bc = getBlockchain(blockDOM);
+                const block = bc.blocks[idx];
 
                 // With generating new hash for the block
                 //block.setData(blockDOM.find('textarea[name="data"]').val());
@@ -299,15 +306,15 @@
 
                 refreshBlockState(bc, idx, blockDOM);
             },
-            
+
             // Manually trigger the rehash for the block. Calls refreshHash to show
             // the effects of changes in the block data.
             hashBlock = function(ev) {
                 // First find the right block and chain-index of the block
-                var blockDOM = $(ev.target).closest('li'),
-                    idx = blockDOM.data('index'),
-                    bc = getBlockchain(blockDOM);
-                block = bc.blocks[idx];
+                const blockDOM = $(ev.target).closest('li');
+                const idx = blockDOM.data('index');
+                const bc = getBlockchain(blockDOM);
+                const block = bc.blocks[idx];
                 // Call rehash
                 block.reHash();
                 // Show the result nonce
@@ -322,15 +329,15 @@
                 // And update block states
                 refreshBlockState(bc, idx, blockDOM);
             },
-            
+
             // Manually trigger the mining for the block. Calls refreshHash to show
             // the effects of changes in the block data.
             mineBlock = function(ev) {
                 // First find the right block and chain-index of the block
-                var blockDOM = $(ev.target).closest('li'),
-                    idx = blockDOM.data('index'),
-                    bc = getBlockchain(blockDOM);
-                block = bc.blocks[idx];
+                const blockDOM = $(ev.target).closest('li');
+                const idx = blockDOM.data('index');
+                const bc = getBlockchain(blockDOM);
+                const block = bc.blocks[idx];
                 // Start the mining
                 BlockchainHelper.mine(block);
                 // Show the result nonce
@@ -345,17 +352,17 @@
                 // And update block states
                 refreshBlockState(bc, idx, blockDOM);
             },
-            
+
             // Manually trigger the distribution of the block in the chain.
             distributeChain = function(ev) {
-                var bc = getBlockchain(ev.target);
+                const bc = getBlockchain(ev.target);
                 distributeBlocks(bc, bc.nextIndex()-1);
             };
-            
+
         return {
             init: function() {
                 // Create an initial Blockchain and add some blocks
-                var bc = new Blockchain();
+                const bc = new Blockchain();
                 // Initialize a few blocks
                 bc.submitBlock(new Block(bc.nextIndex(), bc.lastHash(), "test"));
                 bc.submitBlock(new Block(bc.nextIndex(), bc.lastHash(), "the"));
@@ -367,7 +374,7 @@
                 bc.submitBlock(new Block(bc.nextIndex(), null, "failed wrong last hash"));
                 bc.addBlock(new Block(bc.nextIndex(), bc.lastHash(), "failed wrong hash difficulty").reHash());
 
-                var changedBlock = BlockchainHelper.mine(new Block(bc.nextIndex(), bc.lastHash(), "Original data"));
+                const changedBlock = BlockchainHelper.mine(new Block(bc.nextIndex(), bc.lastHash(), "Original data"));
                 changedBlock.data = "Something else";
                 bc.addBlock(changedBlock);
 
@@ -375,9 +382,10 @@
                 //chainNodes.push(bc.clone());
 
                 // Create the demo element where all the chains will be shown
-                $(document.body).append($('<div class="chainDemo"><button id="add-node">Add node</button></div>'));
-                
-                chainNodes.forEach(function(bc) { 
+                const $parent = $(document.getElementById('chainDemo') || document.body);
+                $parent.append($('<div class="chainDemo"><button id="add-node">Add node</button></div>'));
+
+                chainNodes.forEach(function(bc) {
                     createChainDOM($('.chainDemo'), bc);
                     bc.changed = blockchainChanged;
                 });
@@ -389,8 +397,7 @@
 
 
     // Init script
-    $(document)
-        .ready(function(){
-            $.demo.init();
-        });
+    $(document).ready(function(){
+        $.demo.init();
+    });
 })(jQuery);
